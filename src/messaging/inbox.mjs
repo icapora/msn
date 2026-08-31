@@ -1,10 +1,25 @@
 import { EventEmitter } from 'node:events';
 import { createServer } from 'node:net';
-import { existsSync, mkdirSync, unlinkSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { existsSync, mkdirSync, readdirSync, unlinkSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 
 const ENVELOPE = /<cross-session-message([^>]*)>\n?([\s\S]*?)\n?<\/cross-session-message>/;
 const ATTRIBUTE = /(\S+)="([^"]*)"/g;
+
+/**
+ * Whether a process is still running.
+ * @param {number} pid
+ * @returns {boolean}
+ */
+function isRunning(pid) {
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error.code === 'EPERM';
+  }
+}
 
 /**
  * Pull the sender and body out of a cross-session envelope.
@@ -74,6 +89,44 @@ export function toRecord(line, selfName) {
 }
 
 /**
+ * Remove sockets left behind by runs that did not shut down cleanly.
+ *
+ * A socket is named after the process that bound it, so one from a crashed run
+ * matches no live process's path and would otherwise stay forever: every kill
+ * leaves another file in the directory. Sockets whose pid is still running are
+ * left alone, since a second server may legitimately be up.
+ *
+ * @param {string} dir Directory holding this application's sockets.
+ * @param {(pid: number) => boolean} isAlive Liveness predicate, injected for tests.
+ * @returns {number} How many were removed.
+ */
+export function pruneStaleSockets(dir, isAlive) {
+  let removed = 0;
+
+  let entries;
+  try {
+    entries = readdirSync(dir);
+  } catch {
+    return 0;
+  }
+
+  for (const entry of entries) {
+    if (!entry.endsWith('.sock')) continue;
+
+    const pid = Number.parseInt(entry, 10);
+    if (!Number.isInteger(pid) || isAlive(pid)) continue;
+
+    try {
+      unlinkSync(join(dir, entry));
+      removed += 1;
+    } catch {
+      /* another process removed it first, which is the outcome we wanted */
+    }
+  }
+  return removed;
+}
+
+/**
  * The address other sessions reply to.
  *
  * Binding this is what makes a reply deliverable: Claude copies the `from`
@@ -125,6 +178,7 @@ export class Inbox extends EventEmitter {
     return new Promise((resolve, reject) => {
       try {
         mkdirSync(dirname(this.#path), { recursive: true, mode: 0o700 });
+        pruneStaleSockets(dirname(this.#path), isRunning);
         if (existsSync(this.#path)) unlinkSync(this.#path);
       } catch (error) {
         reject(error);

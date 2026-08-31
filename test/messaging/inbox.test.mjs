@@ -1,10 +1,15 @@
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { connect } from 'node:net';
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { Inbox, parseEnvelope, toRecord } from '../../src/messaging/inbox.mjs';
+import {
+  Inbox,
+  parseEnvelope,
+  pruneStaleSockets,
+  toRecord,
+} from '../../src/messaging/inbox.mjs';
 
 const sockets = [];
 
@@ -163,4 +168,39 @@ test('replaces a stale socket file left by an earlier run', async () => {
   await second.start();
   assert.equal(second.listening, true);
   second.stop();
+});
+
+test('removes sockets whose process is gone and keeps the ones still running', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'mp-'));
+  writeFileSync(join(dir, '111.sock'), '');
+  writeFileSync(join(dir, '222.sock'), '');
+  writeFileSync(join(dir, 'notes.txt'), 'not a socket');
+
+  const removed = pruneStaleSockets(dir, (pid) => pid === 222);
+
+  assert.equal(removed, 1);
+  assert.equal(existsSync(join(dir, '111.sock')), false);
+  assert.equal(existsSync(join(dir, '222.sock')), true);
+  assert.equal(existsSync(join(dir, 'notes.txt')), true);
+
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test('a directory that is not there is not an error', () => {
+  assert.equal(
+    pruneStaleSockets('/nowhere/at/all', () => false),
+    0,
+  );
+});
+
+test('binding cleans up after a run that was killed', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'mp-'));
+  sockets.push(dir);
+  writeFileSync(join(dir, '999999.sock'), '');
+
+  const inbox = new Inbox(join(dir, `${process.pid}.sock`), 'MSN Web');
+  await inbox.start();
+
+  assert.equal(existsSync(join(dir, '999999.sock')), false);
+  inbox.stop();
 });
