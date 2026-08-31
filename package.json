@@ -38,7 +38,8 @@
     "format:check": "prettier --check .",
     "install:hook": "node scripts/install.mjs",
     "uninstall:hook": "node scripts/uninstall.mjs",
-    "doctor": "node scripts/doctor.mjs"
+    "doctor": "node scripts/doctor.mjs",
+    "demo": "node scripts/demo.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",

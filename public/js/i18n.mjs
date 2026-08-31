@@ -45,6 +45,7 @@ export const CATALOGUES = {
     'window.canSend':
       'Tu mensaje llega a {name} como mensaje entre sesiones: no aprueba permisos ni ejecuta slash commands.',
     'window.cannotSend': 'No se puede escribir: {name} no está corriendo.',
+    'window.sendDisabled': 'Envío deshabilitado en este servidor (MSN_DISABLE_SEND=1).',
 
     'typing.one': '{name} está escribiendo…',
     'typing.many': '{names} y {last} están escribiendo…',
@@ -105,6 +106,7 @@ export const CATALOGUES = {
     'window.canSend':
       'Your message reaches {name} as a cross-session message: it approves no permissions and runs no slash commands.',
     'window.cannotSend': 'Cannot write: {name} is not running.',
+    'window.sendDisabled': 'Sending is disabled on this server (MSN_DISABLE_SEND=1).',
 
     'typing.one': '{name} is typing…',
     'typing.many': '{names} and {last} are typing…',

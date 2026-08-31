@@ -94,6 +94,21 @@ function threadFor(name) {
   );
 }
 
+/**
+ * Why the composer is usable, or is not.
+ *
+ * A disabled server and an absent session are different problems and used to
+ * report the same message, which sent the reader looking for a session that was
+ * running perfectly well.
+ *
+ * @param {object|null} session
+ * @returns {'ok'|'disabled'|'unreachable'}
+ */
+function sendState(session) {
+  if (!state.meta.sendEnabled) return 'disabled';
+  return session?.socketPath ? 'ok' : 'unreachable';
+}
+
 function liveSession(name) {
   return state.sessions.find((session) => session.name === name) ?? null;
 }
@@ -286,13 +301,7 @@ function render() {
   if (active !== null) {
     const session = liveSession(active);
     const statuses = new Map(state.sessions.map((entry) => [entry.name, entry.status]));
-    conversations.update(
-      active,
-      threadFor(active),
-      session,
-      statuses,
-      state.meta.sendEnabled && Boolean(session?.socketPath),
-    );
+    conversations.update(active, threadFor(active), session, statuses, sendState(session));
   }
 
   const total = state.meta.messageCount ?? state.messages.length;

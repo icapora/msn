@@ -19,6 +19,15 @@ All notable changes to this project are documented here. The format follows
 - Deterministic avatars, synthesised sounds, Zumbido, date separators and splash screen.
 - `install`, `uninstall` and `doctor` scripts. The doctor reports the platform and probes
   every socket directory Claude Code may have used.
+- `make demo` / `npm run demo`: the viewer on fictional sessions and invented conversations,
+  with sending disabled. It is how the README screenshot was taken — a live install would
+  have published real session names and message text, in the one place a grep cannot find
+  them later.
+- A `Makefile` fronting every command, which also removes the `npm run install:hook --
+--apply` wart. Each target is a plain `node` command, so `make` stays optional.
+- The composer says whether sending is disabled or the session is simply not running. Both
+  cases used to report the same thing, which sent the reader looking for a session that was
+  running perfectly well.
 - `CLAUDE.md`: the constraints that look like cleanup opportunities but are load-bearing,
   for anyone opening this repository with Claude Code.
 - `docs/versions.md`: version floors per platform, the support matrix, socket paths, the

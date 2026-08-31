@@ -11,19 +11,20 @@ through its inbox socket.
 ## Commands
 
 ```bash
-npm start                              # server on http://127.0.0.1:4646
-npm test                               # node:test, no test dependency
+make help                              # every target
+make start                             # server on http://127.0.0.1:4646
+make demo                              # the viewer on fictional data, sending disabled
+make check                             # lint, format check and tests, as CI runs them
+make doctor                            # version, platform, hook, log, registry, sockets
+make hook-dry / make hook              # show, then apply, the settings.json change
+make unhook-dry / make unhook
+
 node --test test/log/record.test.mjs   # one file
 node --test --test-name-pattern="two forms" test/log/record.test.mjs   # one test
-npm run lint && npm run format:check   # what CI enforces
-npm run doctor                         # version, platform, hook, log, registry, sockets
-
-npm run install:hook                   # dry run: prints the settings.json diff
-npm run install:hook -- --apply
-npm run uninstall:hook -- --apply
 ```
 
-Always scope `--test-name-pattern` to a file. Applied across the suite it reports files whose
+Every target is a plain `node` command; `make` is a convenience, not a requirement. Always
+scope `--test-name-pattern` to a file. Applied across the suite it reports files whose
 tests were all filtered out as failures, which looks alarming and means nothing.
 
 Everything is configurable by environment variable (see `src/config.mjs`), which is how tests

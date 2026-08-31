@@ -112,9 +112,9 @@ export class Conversations {
    * @param {Array<object>} messages Messages it sent or received, oldest first.
    * @param {object|null} contact Roster entry, when the session is still live.
    * @param {Map<string, string>} statuses Live status keyed by screen name.
-   * @param {boolean} canSend Whether the session is reachable right now.
+   * @param {'ok'|'disabled'|'unreachable'} sendState Why the composer is or is not usable.
    */
-  update(name, messages, contact, statuses, canSend) {
+  update(name, messages, contact, statuses, sendState) {
     const entry = this.#windows.get(name);
     if (!entry) return;
 
@@ -133,11 +133,14 @@ export class Conversations {
     const watched = entry.peerFilter === ALL_PEERS ? peers : [entry.peerFilter];
     entry.typing.textContent = describeTyping(watched, statuses);
 
+    const canSend = sendState === 'ok';
     entry.input.disabled = !canSend;
     entry.send.disabled = !canSend;
-    entry.note.textContent = canSend
-      ? t('window.canSend', { name })
-      : t('window.cannotSend', { name });
+    entry.note.textContent = {
+      ok: () => t('window.canSend', { name }),
+      disabled: () => t('window.sendDisabled'),
+      unreachable: () => t('window.cannotSend', { name }),
+    }[sendState]();
 
     this.#renderLog(entry, visible, name);
   }

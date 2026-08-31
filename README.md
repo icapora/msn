@@ -1,22 +1,48 @@
 # MSN: My Sessions Network
 
-A live, MSN Messenger-styled viewer for the messages your Claude Code sessions send each
-other.
+**Your Claude Code sessions are already talking to each other. This is where you get to
+watch.**
 
-Claude Code sessions on one machine can message each other with `ListAgents` and
-`SendMessage`. That traffic lands inside each session's own conversation and nowhere else,
-so there is no way to watch it in one place. This puts it in a buddy list.
+![A conversation between two sessions](docs/images/conversation.jpg)
+
+## Why this exists
+
+Claude Code sessions on one machine can message each other. Somewhere in another terminal,
+one session is telling another that the schema changed, and you find out later.
+
+That is a buddy list problem, and buddy lists were solved in 2003.
+
+So this is MSN Messenger, for your agents. Contacts grouped by whether they are **Online**,
+**Busy** or **Away**, their working directory sitting underneath the name where the personal
+message used to go. Conversation windows that put you _inside_ a session — its own messages
+on the right, its peers' on the left. Tahoma at 11px. A **Zumbido** button that shakes the
+window and does absolutely nothing else, exactly as it should.
+
+The name is the joke and the description at once: **M**y **S**essions **N**etwork.
+
+Underneath the nostalgia it is a real tool. A hook captures every message, a server streams
+them live, and you can type back into a running session. Nothing leaves your machine.
 
 - **Capture** — a user-level `PostToolUse` hook appends every `SendMessage` call to
   `~/.claude/msn-log.jsonl`.
 - **Serve** — a small Node server tails that log and pushes events to the browser over SSE.
 - **View** — one vanilla-JS page, no build step: buddy list, conversation windows, markdown,
-  Zumbido.
-- **Reply** — type into a window and the message is delivered to that session's inbox
-  socket. The server binds a socket of its own, so peers can answer it.
+  search, Zumbido.
+- **Reply** — type into a window and it reaches that session's inbox socket. The server binds
+  one of its own, so peers can answer back.
 
 Messages never leave your machine. The hook writes to a local file, the server binds to
 loopback, and delivery goes over the per-session Unix socket Claude Code already uses.
+
+## See it without waiting for traffic
+
+```bash
+make demo
+```
+
+Fictional sessions, invented conversations, sending disabled. It is what the screenshot above
+shows, and it is how that screenshot was taken — a live install would have published real
+session names and message text.
 
 ## Requirements
 
@@ -37,15 +63,15 @@ changes.
 ## Install
 
 ```bash
-git clone <this repo> msn && cd msn
-npm install
+git clone https://github.com/icapora/msn && cd msn
+make install
 
-# 1. See exactly what would change in ~/.claude/settings.json
-npm run install:hook
-
-# 2. Apply it
-npm run install:hook -- --apply
+make hook-dry     # see exactly what would change in ~/.claude/settings.json
+make hook         # apply it
 ```
+
+`make help` lists every target. Each one is a plain `node` command, so
+`node scripts/install.mjs --apply` works just as well if you would rather not use `make`.
 
 The installer prints **only the `hooks` key** of the diff, backs the file up to
 `~/.claude/settings.json.msn-backup-<timestamp>`, and touches nothing else. Your settings
@@ -77,7 +103,7 @@ file usually holds credentials; it is never printed in full. It adds:
 ## Run
 
 ```bash
-npm start
+make start
 # MSN: My Sessions Network  ->  http://127.0.0.1:4646
 ```
 
@@ -91,8 +117,8 @@ npm run doctor    # check version, hook, log, registry, sockets, CLI
 ## Uninstall
 
 ```bash
-npm run uninstall:hook            # show the diff
-npm run uninstall:hook -- --apply # apply it
+make unhook-dry   # show the diff
+make unhook       # apply it
 ```
 
 It removes only the hook group whose command runs `msn-hook`, prunes the containers that
@@ -202,11 +228,15 @@ Every value is an environment variable; the defaults are in [`src/config.mjs`](s
 ## Development
 
 ```bash
-npm test              # node:test, no test dependency
-npm run test:coverage
-npm run lint
-npm run format
+make check            # lint, format check and tests — everything CI enforces
+make test             # node:test, no test dependency
+make demo             # the viewer, on fictional data
+make help             # every target
 ```
+
+A single test file is `node --test test/log/record.test.mjs`; one test by name adds
+`--test-name-pattern`, scoped to a file. Applied across the suite the pattern reports files
+whose tests were all filtered out as failures, which looks alarming and means nothing.
 
 Documentation lives in `docs/`, not in comment blocks:
 
