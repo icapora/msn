@@ -86,6 +86,11 @@ across them and appends silently went unreported.
 the one the server printed. With a fixed port, an orphan left by an interrupted run does not
 fail the tests — it _serves_ them, which is far worse than a red build.
 
+**Never assume anything about the environment.** A test that used pid 2 as "a pid that is
+free" passed on macOS and failed on Linux, where pid 2 is `kthreadd` and always running.
+Derive the fact instead: run a process to completion and take its pid. CI runs macOS and
+Linux for exactly this reason.
+
 If you find a flaky test, fix the timing assumption. Do not raise a bound and move on.
 
 ## Reporting a bug

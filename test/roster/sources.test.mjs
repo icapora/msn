@@ -1,5 +1,6 @@
 import { test, beforeEach, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -8,6 +9,20 @@ import { findSocketPath, normaliseRow } from '../../src/roster/cli-source.mjs';
 import { STATUS, toStatus } from '../../src/roster/status.mjs';
 
 let dir;
+
+/**
+ * A pid that is genuinely gone.
+ *
+ * Picking a low number does not work: on Linux pid 2 is `kthreadd`, a kernel
+ * thread present on every machine, so a test that assumed it was free passed on
+ * macOS and failed on Linux. Running a process to completion and taking its pid
+ * is true on every platform.
+ *
+ * @returns {number}
+ */
+function deadPid() {
+  return spawnSync(process.execPath, ['-e', '']).pid;
+}
 
 /** A registry entry shaped like one Claude Code writes. */
 function entry(overrides = {}) {
@@ -51,9 +66,14 @@ test('an unknown liveness shape degrades to away rather than throwing', () => {
   assert.equal(toStatus({ kind: 'interactive', status: 'something-new' }), STATUS.AWAY);
 });
 
-test('isAlive tells a running process from one that never existed', () => {
+test('isAlive tells a running process from one that has exited', () => {
   assert.equal(isAlive(process.pid), true);
+  assert.equal(isAlive(deadPid()), false);
+});
+
+test('isAlive rejects a non-positive pid, which POSIX reads as a process group', () => {
   assert.equal(isAlive(0), false);
+  assert.equal(isAlive(-1), false);
   assert.equal(isAlive(null), false);
 });
 
@@ -66,7 +86,7 @@ test('isValidEntry requires the fields the app actually reads', () => {
 
 test('reads live sessions and drops ones whose process is gone', () => {
   writeEntry('live.json', entry({ name: 'live' }));
-  writeEntry('dead.json', entry({ name: 'dead', pid: 2, sessionId: 'cccc' }));
+  writeEntry('dead.json', entry({ name: 'dead', pid: deadPid(), sessionId: 'cccc' }));
 
   const sessions = readRegistry(dir);
 
