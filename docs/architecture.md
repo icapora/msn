@@ -2,18 +2,19 @@
 
 _Verified against Claude Code 2.1.251._
 
+Messages arrive through two doors and the roster is assembled from two more. Everything
+reaches the browser over one SSE stream; sending is the only path that runs the other way.
+
 ```
-SendMessage (any session)
-      │  PostToolUse hook, async, user-level
-      ▼
-~/.claude/msn-log.jsonl  ───stat poll────►  server  ──SSE──►  browser
-                                                │
-~/.claude/sessions/*.json ──1s────────────────► │  roster + name resolution
-claude agents --json ─────30s─────────────────► │
-                                                │
-browser POST /api/send ────────────────────────►└──► /tmp/cc-socks/<pid>.sock
-                                                │
-peer replies ──────────────────────────────────►└──◄ /tmp/cc-socks-msn/<pid>.sock
+SendMessage (any session) → hook → msn-log.jsonl → stat poll ┐
+                                                             ├→ History ┐
+peer replies → our inbox socket ─────────────────────────────┘          │
+                                                                        ├→ SSE → browser
+claude agents --json  (30s) ┐                                           │
+                            ├→ Roster ──────────────────────────────────┘
+~/.claude/sessions/*  (1s) ─┘
+
+browser POST /api/send → Roster resolves the name → /tmp/cc-socks/<pid>.sock
 ```
 
 ## The hook imports nothing

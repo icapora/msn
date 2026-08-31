@@ -33,14 +33,17 @@ point the app at temporary directories instead of patching the filesystem. `MSN_
 
 ## Architecture
 
-Data enters through **two doors** and leaves through one:
+Messages arrive through **two doors** — the capture log and our own inbox socket — and the
+roster is assembled from two more. Everything reaches the browser over one SSE stream:
 
 ```
-SendMessage (any session) → hook → msn-log.jsonl → tail ─┐
-peer replies → inbox socket ────────────────────────────┤→ History → SSE → browser
-                                                         │
-claude agents --json (30s) ─┐                            │
-~/.claude/sessions/*.json (1s) ─→ Roster ────────────────┘
+SendMessage (any session) → hook → msn-log.jsonl → tail ┐
+                                                        ├→ History ┐
+peer replies → inbox socket ────────────────────────────┘          │
+                                                                   ├→ SSE → browser
+claude agents --json  (30s) ┐                                      │
+                            ├→ Roster ─────────────────────────────┘
+~/.claude/sessions/*  (1s) ─┘
 ```
 
 `src/server.mjs` is the only file that wires these together. Read it first.
