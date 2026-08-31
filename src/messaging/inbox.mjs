@@ -1,25 +1,10 @@
 import { EventEmitter } from 'node:events';
-import { createServer } from 'node:net';
-import { existsSync, mkdirSync, readdirSync, unlinkSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { connect, createServer } from 'node:net';
+import { existsSync, mkdirSync, readdirSync, statSync, unlinkSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 
 const ENVELOPE = /<cross-session-message([^>]*)>\n?([\s\S]*?)\n?<\/cross-session-message>/;
 const ATTRIBUTE = /(\S+)="([^"]*)"/g;
-
-/**
- * Whether a process is still running.
- * @param {number} pid
- * @returns {boolean}
- */
-function isRunning(pid) {
-  if (!Number.isInteger(pid) || pid <= 0) return false;
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    return error.code === 'EPERM';
-  }
-}
 
 /**
  * Pull the sender and body out of a cross-session envelope.
@@ -89,38 +74,77 @@ export function toRecord(line, selfName) {
 }
 
 /**
- * Remove sockets left behind by runs that did not shut down cleanly.
+ * Whether anything is accepting connections on a socket path.
  *
- * A socket is named after the process that bound it, so one from a crashed run
- * matches no live process's path and would otherwise stay forever: every kill
- * leaves another file in the directory. Sockets whose pid is still running are
- * left alone, since a second server may legitimately be up.
+ * This asks the question that actually matters. An earlier version asked
+ * whether a process with the pid in the filename was alive, which is a proxy
+ * for it and wrong in two ways: pids are reused, and a filename's pid means
+ * nothing when the file was created in another pid namespace, as it is when a
+ * directory is shared between a container and its host.
+ *
+ * Anything other than a refused connection is treated as alive, so a socket is
+ * never removed on the strength of an error we did not expect.
+ *
+ * @param {string} path
+ * @returns {Promise<boolean>}
+ */
+export function isListening(path) {
+  return new Promise((resolvePromise) => {
+    const socket = connect(path);
+    let settled = false;
+
+    const finish = (listening) => {
+      if (settled) return;
+      settled = true;
+      socket.destroy();
+      resolvePromise(listening);
+    };
+
+    socket.setTimeout(500, () => finish(true));
+    socket.on('connect', () => finish(true));
+    socket.on('error', (error) => finish(error.code !== 'ECONNREFUSED'));
+  });
+}
+
+/**
+ * Remove sockets in this application's own directory that nobody is listening on.
+ *
+ * A killed run leaves its socket file behind, and the file is named after a
+ * process that no longer exists, so nothing would ever reclaim it.
+ *
+ * Two guards keep this from becoming destructive. The directory must not be one
+ * Claude Code uses, because `MSN_INBOX_PATH` is configurable and pointing it at
+ * the shared socket directory would otherwise sweep other sessions' inboxes on
+ * every start. And each entry must actually be a socket, so an unrelated file
+ * that happens to be named like one is left alone.
  *
  * @param {string} dir Directory holding this application's sockets.
- * @param {(pid: number) => boolean} isAlive Liveness predicate, injected for tests.
- * @returns {number} How many were removed.
+ * @param {{protectedDirs?: Array<string>}} [options] Directories to refuse outright.
+ * @returns {Promise<number>} How many were removed.
  */
-export function pruneStaleSockets(dir, isAlive) {
-  let removed = 0;
+export async function pruneStaleSockets(dir, { protectedDirs = [] } = {}) {
+  const target = resolve(dir);
+  if (protectedDirs.some((protectedDir) => resolve(protectedDir) === target)) return 0;
 
   let entries;
   try {
-    entries = readdirSync(dir);
+    entries = readdirSync(target);
   } catch {
     return 0;
   }
 
+  let removed = 0;
   for (const entry of entries) {
     if (!entry.endsWith('.sock')) continue;
-
-    const pid = Number.parseInt(entry, 10);
-    if (!Number.isInteger(pid) || isAlive(pid)) continue;
+    const path = join(target, entry);
 
     try {
-      unlinkSync(join(dir, entry));
+      if (!statSync(path).isSocket()) continue;
+      if (await isListening(path)) continue;
+      unlinkSync(path);
       removed += 1;
     } catch {
-      /* another process removed it first, which is the outcome we wanted */
+      /* gone already, or not ours to remove: either way, leave it */
     }
   }
   return removed;
@@ -171,20 +195,17 @@ export class Inbox extends EventEmitter {
   }
 
   /**
-   * Bind the socket, replacing a stale one left behind by an earlier run.
+   * Bind the socket, clearing sockets left behind by runs that were killed.
+   * @param {{protectedDirs?: Array<string>}} [options] Passed to the prune.
    * @returns {Promise<void>}
    */
-  start() {
-    return new Promise((resolve, reject) => {
-      try {
-        mkdirSync(dirname(this.#path), { recursive: true, mode: 0o700 });
-        pruneStaleSockets(dirname(this.#path), isRunning);
-        if (existsSync(this.#path)) unlinkSync(this.#path);
-      } catch (error) {
-        reject(error);
-        return;
-      }
+  async start({ protectedDirs = [] } = {}) {
+    const dir = dirname(this.#path);
+    mkdirSync(dir, { recursive: true, mode: 0o700 });
+    await pruneStaleSockets(dir, { protectedDirs });
+    if (existsSync(this.#path)) unlinkSync(this.#path);
 
+    return new Promise((resolvePromise, reject) => {
       this.#server = createServer((connection) => {
         let buffer = '';
         connection.setEncoding('utf8');
@@ -205,7 +226,7 @@ export class Inbox extends EventEmitter {
         this.#server = null;
         reject(error);
       });
-      this.#server.listen(this.#path, () => resolve());
+      this.#server.listen(this.#path, () => resolvePromise());
     });
   }
 

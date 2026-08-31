@@ -1,11 +1,13 @@
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
 import { connect } from 'node:net';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   Inbox,
+  isListening,
   parseEnvelope,
   pruneStaleSockets,
   toRecord,
@@ -170,37 +172,113 @@ test('replaces a stale socket file left by an earlier run', async () => {
   second.stop();
 });
 
-test('removes sockets whose process is gone and keeps the ones still running', () => {
+/**
+ * Leave a real socket file with nothing listening on it.
+ *
+ * A killed process is what actually produces one, so the test produces one the
+ * same way rather than inventing a filename and hoping the pid inside it is
+ * free. Hardcoding a "surely unused" pid is the mistake this file's own
+ * subject was written to stop making.
+ *
+ * @param {string} path
+ * @returns {Promise<void>}
+ */
+async function orphanSocket(path) {
+  const child = spawn(process.execPath, [
+    '-e',
+    `require('net').createServer().listen(${JSON.stringify(path)}, () => console.log('up'))`,
+  ]);
+
+  await new Promise((resolve, reject) => {
+    child.stdout.on('data', () => resolve());
+    child.on('error', reject);
+    setTimeout(() => reject(new Error('child never bound the socket')), 10000);
+  });
+
+  child.kill('SIGKILL');
+  await new Promise((resolve) => child.on('exit', resolve));
+}
+
+test('reports a socket with no listener as not listening', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'mp-'));
-  writeFileSync(join(dir, '111.sock'), '');
-  writeFileSync(join(dir, '222.sock'), '');
-  writeFileSync(join(dir, 'notes.txt'), 'not a socket');
+  sockets.push(dir);
+  const path = join(dir, 'orphan.sock');
 
-  const removed = pruneStaleSockets(dir, (pid) => pid === 222);
-
-  assert.equal(removed, 1);
-  assert.equal(existsSync(join(dir, '111.sock')), false);
-  assert.equal(existsSync(join(dir, '222.sock')), true);
-  assert.equal(existsSync(join(dir, 'notes.txt')), true);
-
-  rmSync(dir, { recursive: true, force: true });
+  await orphanSocket(path);
+  assert.equal(existsSync(path), true);
+  assert.equal(await isListening(path), false);
 });
 
-test('a directory that is not there is not an error', () => {
-  assert.equal(
-    pruneStaleSockets('/nowhere/at/all', () => false),
-    0,
-  );
+test('reports a bound socket as listening', async () => {
+  const path = socketPath();
+  const inbox = new Inbox(path, 'MSN Web');
+  await inbox.start();
+
+  try {
+    assert.equal(await isListening(path), true);
+  } finally {
+    inbox.stop();
+  }
+});
+
+test('removes an orphaned socket and keeps a live one', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'mp-'));
+  sockets.push(dir);
+
+  const live = new Inbox(join(dir, 'live.sock'), 'MSN Web');
+  await live.start();
+
+  const dead = join(dir, 'dead.sock');
+  await orphanSocket(dead);
+
+  try {
+    const removed = await pruneStaleSockets(dir);
+
+    assert.equal(removed, 1);
+    assert.equal(existsSync(dead), false);
+    assert.equal(existsSync(join(dir, 'live.sock')), true);
+  } finally {
+    live.stop();
+  }
+});
+
+test('leaves files that are not sockets alone', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'mp-'));
+  sockets.push(dir);
+  writeFileSync(join(dir, 'decoy.sock'), 'a regular file wearing the extension');
+
+  assert.equal(await pruneStaleSockets(dir), 0);
+  assert.equal(existsSync(join(dir, 'decoy.sock')), true);
+});
+
+test('refuses to touch a directory Claude Code uses, however it was configured', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'mp-'));
+  sockets.push(dir);
+  const dead = join(dir, 'dead.sock');
+  await orphanSocket(dead);
+
+  const removed = await pruneStaleSockets(dir, { protectedDirs: ['/tmp/cc-socks', dir] });
+
+  assert.equal(removed, 0);
+  assert.equal(existsSync(dead), true);
+});
+
+test('a directory that is not there is not an error', async () => {
+  assert.equal(await pruneStaleSockets('/nowhere/at/all'), 0);
 });
 
 test('binding cleans up after a run that was killed', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'mp-'));
   sockets.push(dir);
-  writeFileSync(join(dir, '999999.sock'), '');
+  const dead = join(dir, 'dead.sock');
+  await orphanSocket(dead);
 
-  const inbox = new Inbox(join(dir, `${process.pid}.sock`), 'MSN Web');
+  const inbox = new Inbox(join(dir, 'mine.sock'), 'MSN Web');
   await inbox.start();
 
-  assert.equal(existsSync(join(dir, '999999.sock')), false);
-  inbox.stop();
+  try {
+    assert.equal(existsSync(dead), false);
+  } finally {
+    inbox.stop();
+  }
 });

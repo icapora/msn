@@ -88,6 +88,12 @@ protocols are allowlisted. `public/js/avatar.mjs` builds SVG the same way.
 **Never parse transcripts** under `~/.claude/projects/`. Their format is internal and changes
 between versions. The hook payload is the supported way to observe a message.
 
+**Staleness is measured, not inferred.** `pruneStaleSockets` asks whether anything is
+listening on a socket, not whether a process with the pid in its filename is alive. Pids are
+reused, and a filename's pid means nothing across a pid namespace. It also refuses to touch
+any directory Claude Code uses, because `MSN_INBOX_PATH` is configurable and pointing it at
+the shared socket directory would otherwise delete other sessions' inboxes.
+
 **Socket directories are probed, never assumed.** Claude Code prefers `/tmp/cc-socks` but
 falls back to `/tmp/cc-socks-<uid>`. Hardcoding the first makes sending fail invisibly on the
 machines that need the second: the buddy list still looks perfect, because names come from

@@ -157,7 +157,7 @@ const probe = await probeClaudeVersion({
 if (probe.warning) warn(probe.warning);
 
 try {
-  await inbox.start();
+  await inbox.start({ protectedDirs: config.socketDirs });
 } catch (error) {
   warn(`replies cannot be received: ${error.message}`);
 }

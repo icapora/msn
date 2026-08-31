@@ -29,9 +29,10 @@ All notable changes to this project are documented here. The format follows
 - Bounded in-memory history with backward paging over `GET /api/history?before=<ts>`, and
   capture-log rotation. Messages average several kilobytes, so an unbounded history was
   both a memory leak and a slow first paint.
-- The inbox prunes sockets left behind by runs that were killed. A socket is named after
-  the process that bound it, so one from a crashed run matched no live path and accumulated
-  in `/tmp` indefinitely.
+- The inbox prunes sockets left behind by runs that were killed, by asking whether anything
+  is listening rather than whether a pid from the filename is alive. It refuses to touch a
+  directory Claude Code uses and skips entries that are not sockets, so a misconfigured
+  `MSN_INBOX_PATH` cannot sweep other sessions' inboxes.
 - `GET /api/meta` for counters without opening an event stream.
 - Full-text search across resident messages, matching body and participants.
 - Interface language follows the system, with English and Spanish catalogues and a
