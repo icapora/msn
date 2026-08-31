@@ -19,6 +19,8 @@ All notable changes to this project are documented here. The format follows
 - Deterministic avatars, synthesised sounds, Zumbido, date separators and splash screen.
 - `install`, `uninstall` and `doctor` scripts. The doctor reports the platform and probes
   every socket directory Claude Code may have used.
+- `CLAUDE.md`: the constraints that look like cleanup opportunities but are load-bearing,
+  for anyone opening this repository with Claude Code.
 - `docs/versions.md`: version floors per platform, the support matrix, socket paths, the
   auth-line rules and the boundaries sessions cannot cross.
 - An inbox socket, so peers can reply to messages sent from the browser. Verified by probe
