@@ -1,0 +1,21 @@
+node_modules/
+coverage/
+*.log
+.DS_Store
+
+# Editor and OS noise
+.idea/
+.vscode/
+*.swp
+
+# Local overrides
+.env
+.env.*
+*.local
+
+# Never commit captured conversations. The capture log holds the full text of
+# every message your sessions send, so a run configured with MSN_LOG_PATH
+# pointing inside the repository must not be able to publish it by accident.
+msn-log.jsonl
+msn-log.jsonl.*
+msn-names.json

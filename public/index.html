@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MSN: My Sessions Network</title>
+    <link rel="stylesheet" href="/css/msn.css" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M7 8l7 8-7 8' fill='none' stroke='%23f2a33c' stroke-width='4.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M17 8l7 8-7 8' fill='none' stroke='%233fb8af' stroke-width='4.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+    />
+  </head>
+  <body>
+    <div id="splash" class="splash">
+      <div class="splash-card">
+        <svg class="logo logo-xl" viewBox="0 0 64 40" aria-hidden="true">
+          <use href="#msn-mark" />
+        </svg>
+        <div class="wordmark wordmark-xl">
+          <span class="wordmark-main">MSN</span>
+          <span class="wordmark-sub">My Sessions Network</span>
+        </div>
+      </div>
+    </div>
+
+    <svg style="display: none" aria-hidden="true">
+      <symbol id="msn-mark" viewBox="0 0 64 40">
+        <path
+          d="M14 9l13 11-13 11"
+          fill="none"
+          stroke="#f2a33c"
+          stroke-width="8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+        <path
+          d="M33 9l13 11-13 11"
+          fill="none"
+          stroke="#3fb8af"
+          stroke-width="8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+    </svg>
+
+    <header class="titlebar">
+      <svg class="logo" viewBox="0 0 64 40" aria-hidden="true"><use href="#msn-mark" /></svg>
+      <h1 class="wordmark">
+        <span class="wordmark-main">MSN</span>
+        <span class="wordmark-sub">My Sessions Network</span>
+      </h1>
+      <div class="titlebar-spacer"></div>
+      <input
+        id="msg-search"
+        class="msg-search"
+        type="search"
+        placeholder="Search messages…"
+        data-i18n-placeholder="search.messages"
+        autocomplete="off"
+      />
+      <div id="connection" class="connection" data-state="connecting">connecting…</div>
+    </header>
+
+    <div id="banners" class="banners" hidden></div>
+
+    <main class="workspace">
+      <aside class="buddy-panel">
+        <div class="me">
+          <div id="me-avatar" class="avatar avatar-lg"></div>
+          <div class="me-text">
+            <div class="me-name" data-i18n="me.name">MSN Web</div>
+            <div class="me-note" data-i18n="me.note">watching your sessions</div>
+          </div>
+        </div>
+        <div class="buddy-search">
+          <input
+            id="filter"
+            type="search"
+            placeholder="Search contacts…"
+            data-i18n-placeholder="search.contacts"
+            autocomplete="off"
+          />
+        </div>
+        <div id="buddy-list" class="buddy-list"></div>
+      </aside>
+
+      <section class="conversation-panel">
+        <div id="search-results" class="search-results" hidden></div>
+        <div id="tabs" class="tabs"></div>
+        <div id="windows" class="windows">
+          <div class="empty-state">
+            <svg class="logo logo-lg" viewBox="0 0 64 40" aria-hidden="true">
+              <use href="#msn-mark" />
+            </svg>
+            <p data-i18n="empty.title">Pick a contact to see the conversation.</p>
+            <p class="empty-hint" data-i18n="empty.hint">
+              Conversations appear on their own as your sessions message each other.
+            </p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="statusbar">
+      <span class="statusbar-brand">MSN — My Sessions Network</span>
+      <span id="stat-messages">0 messages</span>
+      <span id="stat-uptime">uptime 00:00:00</span>
+      <span id="stat-sessions">0 sessions</span>
+    </footer>
+
+    <script type="module" src="/js/app.mjs"></script>
+  </body>
+</html>

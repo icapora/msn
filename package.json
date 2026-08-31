@@ -1,0 +1,50 @@
+{
+  "name": "msn-my-sessions-network",
+  "version": "0.1.0",
+  "description": "MSN: My Sessions Network - a live MSN Messenger-style viewer for Claude Code cross-session messages",
+  "keywords": [
+    "claude-code",
+    "cross-session-messaging",
+    "hooks",
+    "sse",
+    "msn"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/icapora/msn.git"
+  },
+  "bugs": {
+    "url": "https://github.com/icapora/msn/issues"
+  },
+  "homepage": "https://github.com/icapora/msn#readme",
+  "type": "module",
+  "engines": {
+    "node": ">=20.11"
+  },
+  "claudeCode": {
+    "minimumVersion": "2.1.224",
+    "verifiedAgainst": "2.1.251"
+  },
+  "bin": {
+    "msn": "./src/server.mjs"
+  },
+  "scripts": {
+    "start": "node src/server.mjs",
+    "test": "node --test",
+    "test:coverage": "node --test --experimental-test-coverage",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "install:hook": "node scripts/install.mjs",
+    "uninstall:hook": "node scripts/uninstall.mjs",
+    "doctor": "node scripts/doctor.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^9.1.0",
+    "globals": "^15.14.0",
+    "prettier": "^3.4.2"
+  }
+}
