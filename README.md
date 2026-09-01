@@ -3,7 +3,7 @@
 **Your Claude Code sessions are already talking to each other. This is where you get to
 watch.**
 
-![A conversation between two sessions](docs/images/conversation.jpg)
+![Opening a conversation, reading it, and searching across every message](docs/images/demo.gif)
 
 ## Why this exists
 
@@ -34,15 +34,18 @@ them live, and you can type back into a running session. Nothing leaves your mac
 Messages never leave your machine. The hook writes to a local file, the server binds to
 loopback, and delivery goes over the per-session Unix socket Claude Code already uses.
 
+![A session's own messages on the right, its peers' on the left](docs/images/conversation.jpg)
+
 ## See it without waiting for traffic
 
 ```bash
 make demo
 ```
 
-Fictional sessions, invented conversations, sending disabled. It is what the screenshot above
-shows, and it is how that screenshot was taken — a live install would have published real
-session names and message text.
+Fictional sessions, invented conversations, sending disabled. It is what the recording above
+shows, and it is how that recording was made — a live install would have published real
+session names, working directories and message text, in the one place a `grep` can never
+find them again.
 
 ## Requirements
 

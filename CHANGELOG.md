@@ -19,6 +19,8 @@ All notable changes to this project are documented here. The format follows
 - Deterministic avatars, synthesised sounds, Zumbido, date separators and splash screen.
 - `install`, `uninstall` and `doctor` scripts. The doctor reports the platform and probes
   every socket directory Claude Code may have used.
+- A recording and a screenshot in the README, both taken from the demo fixture rather than
+  a live install.
 - `make demo` / `npm run demo`: the viewer on fictional sessions and invented conversations,
   with sending disabled. It is how the README screenshot was taken — a live install would
   have published real session names and message text, in the one place a grep cannot find
